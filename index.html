@@ -141,6 +141,7 @@
       scalp: 'とくに気になることはない',
       hairConcern: 'とくになし',
       colorHistory: 'わからない',
+      interimChange: 'とくになし（前回から変わりありません）',
     };
 
     // ====== カラー深掘り（薬剤の事前発注用） ======
@@ -189,6 +190,13 @@
       'かぶれ・腫れ・かゆみが出たことがある',
       'わからない',
     ];
+    // 既存のお客様専用：前回来店から今回までの髪の変化（薬剤選定のヒント）
+    const INTERIM_CHANGE = [
+      '他のサロンで施術をした（カット・カラー・パーマなど）',
+      '市販のカラー剤で自分で染めた（セルフカラー）',
+      'その他（ヘナ・ブリーチ・トリートメントなど）',
+      'とくになし（前回から変わりありません）',
+    ];
 
     // ====== 流入経路（新規のお客様のみ・どこで知ったか） ======
     const SOURCE = [
@@ -233,8 +241,10 @@
       if (m.includes('縮毛矯正')) waveBlock.push('straightRange');
       if (m.includes('髪質改善トリートメント')) waveBlock.push('qualityFocus');
       if (visitType === 'existing') {
-        // 既存のお客様は頭皮・髪質を橋元さんが把握済みのため scalp / hairConcern は省略
-        return ['visitType', 'name', 'menu', ...colorBlock, ...waveBlock, 'styleImage', 'review', 'complete'];
+        // 既存のお客様は頭皮・髪質・カラー履歴を橋元さんが把握済みのため scalp / hairConcern / colorHistory は省略。
+        // 代わりに「前回からの変化」（他店施術・セルフカラー）を聞く。
+        const colorBlockExisting = colorBlock.filter((s) => s !== 'colorHistory');
+        return ['visitType', 'name', 'interimChange', 'menu', ...colorBlockExisting, ...waveBlock, 'styleImage', 'review', 'complete'];
       }
       // 新規 ＋ 未選択時のデフォルト
       return ['visitType', 'name', 'birth', 'contact', 'source', 'allergy', 'history', 'scalp', 'hairConcern', 'menu', ...colorBlock, ...waveBlock, 'styleImage', 'review', 'complete'];
@@ -327,6 +337,7 @@
         history: [],
         scalp: [],
         hairConcern: [],
+        interimChange: [],
         menu: [], menuOther: '',
         colorTone: '', colorBright: '', colorGray: '', colorRange: '',
         colorHistory: [], colorSafety: '',
@@ -426,6 +437,7 @@
           case 'history': return form.history.length > 0;
           case 'scalp': return form.scalp.length > 0;
           case 'hairConcern': return form.hairConcern.length > 0;
+          case 'interimChange': return form.interimChange.length > 0;
           case 'menu':
             return form.menu.length > 0 && (!form.menu.includes('その他') || form.menuOther.trim().length > 0);
           case 'colorTone': return !!form.colorTone;
@@ -492,7 +504,7 @@
 
         const headers = [
           '記入日時', '来店種別', '姓', '名', '生年月日', '年齢',
-          '電話番号', 'メールアドレス', 'アレルギー・敏感肌', '施術履歴（直近1年）',
+          '電話番号', 'メールアドレス', 'アレルギー・敏感肌', '施術履歴（直近1年）', '前回からの変化',
           '頭皮の状態', '髪の悩み', '希望メニュー',
           'カラー：なりたい色', 'カラー：明るさ', 'カラー：白髪', 'カラー：染める範囲',
           'カラー：今の髪の状態', 'カラー：かぶれ経験',
@@ -503,7 +515,7 @@
           dateTime, visitLabel, form.lastName, form.firstName,
           birthStr, ageStr,
           isNew ? form.phone : '', isNew ? form.email : '',
-          allergyStr, historyStr, scalpStr, hairStr, menuStr,
+          allergyStr, historyStr, isNew ? '' : form.interimChange.join('、'), scalpStr, hairStr, menuStr,
           color ? form.colorTone : '', color ? form.colorBright : '',
           color ? form.colorGray : '', color ? form.colorRange : '',
           color ? form.colorHistory.join('、') : '', color ? form.colorSafety : '',
@@ -571,6 +583,9 @@
           if (form.source) L.push('知ったきっかけ：' + (form.source === 'その他' && form.sourceOther ? 'その他（' + form.sourceOther + '）' : form.source));
           if (form.allergy.length) L.push('アレルギー・敏感肌：' + expandOther(form.allergy, form.allergyOther));
           if (form.history.length) L.push('施術履歴（直近1年）：' + form.history.join('、'));
+        }
+        if (form.visitType === 'existing') {
+          if (form.interimChange.length) L.push('前回からの変化：' + form.interimChange.join('、'));
         }
         if (form.scalp.length) L.push('頭皮の状態：' + form.scalp.join('、'));
         if (form.hairConcern.length) L.push('髪の悩み：' + form.hairConcern.join('、'));
@@ -844,6 +859,16 @@
           );
         }
 
+        if (step === 'interimChange') {
+          return Q('前回のご来店から今日までの間に、髪に変化はありましたか？',
+            '他のサロンでの施術や、ご自宅でのカラーリングなどがあれば教えてください。薬剤を選ぶ大切なヒントになります。',
+            h('div', {}, INTERIM_CHANGE.map((o) => h(OptionCard, {
+              key: o, label: o, selected: form.interimChange.includes(o),
+              onClick: () => toggleMulti('interimChange', o),
+            })))
+          );
+        }
+
         if (step === 'scalp') {
           return Q('最近の頭皮の状態はいかがですか？', '当てはまるものをすべてお選びください。',
             h('div', {}, SCALP.map((o) => h(OptionCard, {
@@ -1018,6 +1043,7 @@
             add('アレルギー・敏感肌', expandOther(form.allergy, form.allergyOther), 'allergy');
             add('施術履歴（直近1年）', form.history.join('、'), 'history');
           }
+          if (!isNew) add('前回からの変化', form.interimChange.join('、'), 'interimChange');
           add('頭皮の状態', form.scalp.join('、'), 'scalp');
           add('髪の悩み', form.hairConcern.join('、'), 'hairConcern');
           add('ご希望メニュー', expandOther(form.menu, form.menuOther), 'menu');
