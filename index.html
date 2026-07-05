@@ -336,6 +336,7 @@
       const [stepIndex, setStepIndex] = useState(0);
       const [saved, setSaved] = useState(false);
       const [copied, setCopied] = useState(false);
+      const [lineStatus, setLineStatus] = useState(null); // 'prefill'（本文自動入力）| 'paste'（貼り付け案内）
       const [editingFromReview, setEditingFromReview] = useState(false);
       const [photos, setPhotos] = useState([]);
       const topRef = useRef(null);
@@ -395,9 +396,9 @@
         if (photos.length) parts.push('参考写真' + photos.length + '枚（別途お送りします）');
         return parts.join(' / ');
       };
-      // 記入内容の送付チャネル（新規＝予約メッセージ/DM、既存＝LINE）
+      // 記入内容の送付チャネル（メインはLINE直接送信。ここは予備手段の案内文）
       const sendChannel = () => form.visitType === 'new'
-        ? 'ご予約時のメッセージ（ホットペッパー等）やInstagramのDMなど'
+        ? 'LINEのトーク（またはご予約時のメッセージ・InstagramのDM）'
         : 'LINEのトーク画面';
       const onPhotoChange = (e) => {
         const files = Array.from(e.target.files || []);
@@ -599,6 +600,36 @@
             document.body.removeChild(ta);
           }
           setCopied(true);
+        }
+      };
+
+      // LINE公式アカウント（@130awepd）のトークを直接開いて本文を自動入力する
+      // 参考: https://line.me/R/oaMessage/{LINE ID}/?{メッセージ} （LINE公式のURLスキーム）
+      const LINE_OA_ID = '%40130awepd';
+      const copyText = async (text) => {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch (e) {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.focus(); ta.select();
+          try { document.execCommand('copy'); } catch (_) {}
+          document.body.removeChild(ta);
+        }
+      };
+      const sendViaLine = async () => {
+        const text = buildSummaryText();
+        // 保険として必ず先にコピーしておく（自動入力が効かない環境でも貼るだけで済む）
+        await copyText(text);
+        const encoded = encodeURIComponent(text);
+        if (encoded.length <= 4000) {
+          // トークを開いて本文を自動入力（お客様は送信を押すだけ）
+          setLineStatus('prefill');
+          window.location.href = 'https://line.me/R/oaMessage/' + LINE_OA_ID + '/?' + encoded;
+        } else {
+          // 本文が長い場合はURLが切れる恐れがあるため、トークだけ開いて貼り付けてもらう
+          setLineStatus('paste');
+          window.location.href = 'https://line.me/R/ti/p/' + LINE_OA_ID;
         }
       };
 
@@ -969,36 +1000,42 @@
               (needsChemical ? '当日まで薬剤や仕上がりの準備を進めます。' : '当日までに仕上がりのご準備を進めます。'), h('br'),
               '安心してご来店ください。'),
 
-            // お客様のスマホ → LINEで橋元へ送る
+            // お客様のスマホ → LINEのトークを直接開いて橋元へ送る（メイン導線）
+            h('button', {
+              type: 'button', onClick: sendViaLine,
+              className: 'w-full rounded-xl mt-8 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
+              style: { backgroundColor: '#06C755', color: '#ffffff', fontWeight: 700, padding: '16px', fontSize: '16px' },
+            },
+              h(Icon, { name: 'message-circle', size: 20, color: '#ffffff' }),
+              'LINEで橋元に送る'
+            ),
+            form.visitType === 'new' && !lineStatus
+              ? h('p', { className: 'mt-3', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
+                  'はじめての方は、友だち追加のあとにトークが開きます。')
+              : null,
+            lineStatus
+              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
+                  lineStatus === 'prefill'
+                    ? '✓ LINEが開いたら、入力欄の内容をそのまま送信してください。（本文はコピー済みです。もし空欄のときは長押しで貼り付けてください）'
+                    : '✓ 本文をコピーしました。開いたLINEのトークに貼り付けて送信してください。')
+              : null,
+            photos.length
+              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
+                  '📷 選んでいただいた参考写真（' + photos.length + '枚）も、同じLINEのトークにそのまま貼り付けてお送りください。')
+              : null,
+
+            // 予備：共有シート／コピー（LINE以外で送りたい方向け）
             h('button', {
               type: 'button', onClick: sendSummary,
-              className: 'w-full rounded-xl mt-8 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-              style: { backgroundColor: C.gold, color: '#1a1a1a', fontWeight: 700, padding: '16px', fontSize: '16px' },
+              className: 'w-full rounded-xl mt-4 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
+              style: { backgroundColor: 'transparent', color: C.text, fontWeight: 600, padding: '15px', fontSize: '15px', border: '1.5px solid ' + C.border },
             },
-              h(Icon, { name: 'send', size: 20, color: '#1a1a1a' }),
-              '内容を送る／コピーする'
+              h(Icon, { name: 'send', size: 18, color: C.text }),
+              'その他の方法で送る／コピー'
             ),
             copied
               ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
                   '✓ 送信用の内容をコピーしました。' + sendChannel() + 'に貼り付けて橋元へお送りください。')
-              : null,
-
-            // 新規のお客様のみ：LINE友だち追加（来店前の温度が高い瞬間に自分のチャネルへ）
-            form.visitType === 'new'
-              ? h('div', { style: { marginTop: 18 } },
-                  h('p', { style: { fontSize: '13px', color: C.muted, lineHeight: 1.7, marginBottom: 10 } },
-                    '髪のこと、いつでもLINEでご相談ください。'),
-                  h('a', {
-                    href: 'https://lin.ee/tazRvbX',
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    className: 'w-full rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-                    style: { backgroundColor: '#06C755', color: '#ffffff', fontWeight: 700, padding: '16px', fontSize: '16px', textDecoration: 'none' },
-                  },
-                    h(Icon, { name: 'message-circle', size: 20, color: '#ffffff' }),
-                    'LINEで橋元とつながる'
-                  )
-                )
               : null,
 
             // サロン／橋元さんの端末で記入した場合の保存
