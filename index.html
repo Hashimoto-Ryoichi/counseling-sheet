@@ -489,7 +489,7 @@
 
         const headers = [
           '記入日時', '来店種別', '姓', '名', '生年月日', '年齢',
-          '電話番号', 'メールアドレス', 'アレルギー・敏感肌', '施術履歴',
+          '電話番号', 'メールアドレス', 'アレルギー・敏感肌', '施術履歴（直近1年）',
           '頭皮の状態', '髪の悩み', '希望メニュー',
           'カラー：なりたい色', 'カラー：明るさ', 'カラー：白髪', 'カラー：染める範囲',
           'カラー：今の髪の状態', 'カラー：かぶれ経験',
@@ -560,7 +560,7 @@
           if (form.email) L.push('メール：' + form.email);
           if (form.source) L.push('知ったきっかけ：' + (form.source === 'その他' && form.sourceOther ? 'その他（' + form.sourceOther + '）' : form.source));
           if (form.allergy.length) L.push('アレルギー・敏感肌：' + expandOther(form.allergy, form.allergyOther));
-          if (form.history.length) L.push('施術履歴：' + form.history.join('、'));
+          if (form.history.length) L.push('施術履歴（直近1年）：' + form.history.join('、'));
         }
         if (form.scalp.length) L.push('頭皮の状態：' + form.scalp.join('、'));
         if (form.hairConcern.length) L.push('髪の悩み：' + form.hairConcern.join('、'));
@@ -766,7 +766,7 @@
         }
 
         if (step === 'history') {
-          return Q('これまでに経験のある施術を教えてください', '当てはまるものをすべてお選びください。',
+          return Q('直近1年に行なった施術を教えてください', '当てはまるものをすべてお選びください。',
             h('div', {}, HISTORY.map((o) => h(OptionCard, {
               key: o, label: o, selected: form.history.includes(o),
               onClick: () => toggleMulti('history', o),
@@ -944,7 +944,7 @@
             add('メール', form.email, 'contact');
             add('知ったきっかけ', form.source === 'その他' && form.sourceOther ? 'その他（' + form.sourceOther + '）' : form.source, 'source');
             add('アレルギー・敏感肌', expandOther(form.allergy, form.allergyOther), 'allergy');
-            add('施術履歴', form.history.join('、'), 'history');
+            add('施術履歴（直近1年）', form.history.join('、'), 'history');
           }
           add('頭皮の状態', form.scalp.join('、'), 'scalp');
           add('髪の悩み', form.hairConcern.join('、'), 'hairConcern');
