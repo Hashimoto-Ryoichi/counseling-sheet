@@ -337,6 +337,9 @@
       const [saved, setSaved] = useState(false);
       const [copied, setCopied] = useState(false);
       const [lineStatus, setLineStatus] = useState(null); // 'prefill'（本文自動入力）| 'paste'（貼り付け案内）
+      const [karteStatus, _setKarteStatus] = useState(null); // null | 'saving' | 'saved' | 'failed'
+      const karteStatusRef = useRef(null); // 非同期処理から最新値を読むためのミラー
+      const setKarteStatus = (v) => { karteStatusRef.current = v; _setKarteStatus(v); };
       const [editingFromReview, setEditingFromReview] = useState(false);
       const [photos, setPhotos] = useState([]);
       const topRef = useRef(null);
@@ -393,7 +396,7 @@
         const parts = [];
         if (form.styleOmakase) parts.push('おまかせ');
         if (form.styleImage) parts.push(form.styleImage);
-        if (photos.length) parts.push('参考写真' + photos.length + '枚（別途お送りします）');
+        if (photos.length) parts.push('参考写真' + photos.length + '枚' + (karteStatusRef.current === 'saved' ? '（カルテ保存済み）' : '（別途お送りします）'));
         return parts.join(' / ');
       };
       // 記入内容の送付チャネル（メインはLINE直接送信。ここは予備手段の案内文）
@@ -402,7 +405,7 @@
         : 'LINEのトーク画面';
       const onPhotoChange = (e) => {
         const files = Array.from(e.target.files || []);
-        const added = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }));
+        const added = files.map((f) => ({ name: f.name, url: URL.createObjectURL(f), file: f }));
         setPhotos((prev) => [...prev, ...added]);
         e.target.value = '';
       };
@@ -459,8 +462,8 @@
         setStepIndex(1);
       };
 
-      // ====== CSV生成・ダウンロード ======
-      const buildAndDownloadCSV = () => {
+      // ====== カルテ用データ（CSVダウンロードとカルテ自動保存で共用） ======
+      const buildKarteData = () => {
         const isNew = form.visitType === 'new';
         const now = new Date();
         const dateTime =
@@ -508,10 +511,17 @@
           getStyleStr(), sourceStr,
         ];
 
+        const nameForFile = (form.lastName + form.firstName) || 'お客様';
+        const dateLabel = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+        return { headers, row, dateTime, fileDate, dateLabel, nameForFile };
+      };
+
+      // ====== CSV生成・ダウンロード ======
+      const buildAndDownloadCSV = () => {
+        const { headers, row, fileDate, nameForFile } = buildKarteData();
         const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
         const csv = '﻿' + [headers, row].map((r) => r.map(esc).join(',')).join('\r\n');
 
-        const nameForFile = (form.lastName + form.firstName) || 'お客様';
         const filename = 'counseling_' + fileDate + '_' + nameForFile + '.csv';
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -618,6 +628,10 @@
         }
       };
       const sendViaLine = async () => {
+        // カルテ保存が進行中なら最大8秒だけ待つ（本文の写真表記を正しくするため）
+        for (let i = 0; i < 40 && karteStatusRef.current === 'saving'; i++) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
         const text = buildSummaryText();
         // 保険として必ず先にコピーしておく（自動入力が効かない環境でも貼るだけで済む）
         await copyText(text);
@@ -632,6 +646,62 @@
           window.location.href = 'https://line.me/R/ti/p/' + LINE_OA_ID;
         }
       };
+
+      // ====== カルテ自動保存（Google Apps Script経由でスプレッドシート＋ドライブへ） ======
+      const KARTE_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxLyebHUGKmbw8dSRfRpQi_BeNGVZHI02a1MLhRtOWojlMsD0ZJvJ5WzIa_bNsqhtgxZw/exec'; // GASのウェブアプリURL
+      const KARTE_SECRET = 'hashimoto-karte-2026';
+
+      // 写真を縮小してdataURL化（長辺1600px・JPEG）：通信量と保存容量の節約
+      const photoToDataUrl = (file) => new Promise((resolve) => {
+        const img = new Image();
+        const objUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 1600;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const ht = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = ht;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, ht);
+          URL.revokeObjectURL(objUrl);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(null); };
+        img.src = objUrl;
+      });
+
+      const saveKarte = async () => {
+        if (!KARTE_ENDPOINT) return;
+        setKarteStatus('saving');
+        try {
+          const { headers, row, dateLabel, nameForFile } = buildKarteData();
+          const dataUrls = [];
+          for (const p of photos) {
+            if (!p.file) continue;
+            const d = await photoToDataUrl(p.file);
+            if (d) dataUrls.push({ name: p.name, dataUrl: d });
+          }
+          const res = await fetch(KARTE_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              secret: KARTE_SECRET,
+              headers, row, dateLabel,
+              customerName: nameForFile,
+              photos: dataUrls,
+            }),
+          });
+          const out = await res.json();
+          setKarteStatus(out && out.ok ? 'saved' : 'failed');
+        } catch (e) {
+          setKarteStatus('failed');
+        }
+      };
+
+      // 完了画面に到達したら一度だけ自動保存
+      useEffect(() => {
+        if (step === 'complete' && karteStatusRef.current === null) saveKarte();
+      }, [step]);
 
       // ====== 各ステップの本文 ======
       function renderStep() {
@@ -921,7 +991,9 @@
                 : null,
               photos.length
                 ? h('p', { className: 'mt-3', style: { fontSize: '11px', color: C.muted, lineHeight: 1.7 } },
-                    '※お写真は、送信後に' + sendChannel() + 'にも貼り付けてお送りください。')
+                    KARTE_ENDPOINT
+                      ? '※お写真は、最後の送信時に自動で橋元へ届きます。'
+                      : '※お写真は、送信後に' + sendChannel() + 'にも貼り付けてお送りください。')
                 : null
             )
           );
@@ -1021,7 +1093,11 @@
               : null,
             photos.length
               ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
-                  '📷 選んでいただいた参考写真（' + photos.length + '枚）も、同じLINEのトークにそのまま貼り付けてお送りください。')
+                  karteStatus === 'saved'
+                    ? '📷 参考写真（' + photos.length + '枚）は自動で保存されました。LINEへの貼り付けは不要です。'
+                    : karteStatus === 'saving'
+                      ? '📷 参考写真（' + photos.length + '枚）を保存しています…そのままお待ちください。'
+                      : '📷 選んでいただいた参考写真（' + photos.length + '枚）も、同じLINEのトークにそのまま貼り付けてお送りください。')
               : null,
 
             // 予備：共有シート／コピー（LINE以外で送りたい方向け）
