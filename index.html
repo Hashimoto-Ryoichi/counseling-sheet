@@ -412,9 +412,7 @@
         switch (s) {
           case 'visitType': return !!form.visitType;
           case 'name':
-            return form.visitType === 'existing'
-              ? form.lastName.trim().length > 0
-              : form.lastName.trim().length > 0 && form.firstName.trim().length > 0;
+            return form.lastName.trim().length > 0 && form.firstName.trim().length > 0;
           case 'birth': return form.birthYear && form.birthMonth && form.birthDay;
           case 'contact': return true; // 連絡先は任意（ご予約時に取得済みのため）
           case 'source':
@@ -498,7 +496,7 @@
           '希望スタイルイメージ', '流入経路',
         ];
         const row = [
-          dateTime, visitLabel, form.lastName, isNew ? form.firstName : '',
+          dateTime, visitLabel, form.lastName, form.firstName,
           birthStr, ageStr,
           isNew ? form.phone : '', isNew ? form.email : '',
           allergyStr, historyStr, scalpStr, hairStr, menuStr,
@@ -512,7 +510,7 @@
         const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
         const csv = '﻿' + [headers, row].map((r) => r.map(esc).join(',')).join('\r\n');
 
-        const nameForFile = (form.lastName + (isNew ? form.firstName : '')) || 'お客様';
+        const nameForFile = (form.lastName + form.firstName) || 'お客様';
         const filename = 'counseling_' + fileDate + '_' + nameForFile + '.csv';
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -552,7 +550,7 @@
           ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
         const L = [];
         L.push('【ご来店前カウンセリング】');
-        L.push('お名前：' + form.lastName + (isNew && form.firstName ? ' ' + form.firstName : '') + ' 様');
+        L.push('お名前：' + form.lastName + (form.firstName ? ' ' + form.firstName : '') + ' 様');
         L.push('来店種別：' + (isNew ? '新規' : '以前にも来店'));
         if (isNew) {
           const age = computeAge();
@@ -631,17 +629,10 @@
         }
 
         if (step === 'name') {
-          if (form.visitType === 'existing') {
-            return Q('お名前を教えてください', '確認のため、姓のみで大丈夫です。',
-              h(Field, { label: '姓' },
-                h('input', {
-                  type: 'text', value: form.lastName, placeholder: '例：橋元',
-                  onChange: (e) => set('lastName', e.target.value), style: inputStyle,
-                })
-              )
-            );
-          }
-          return Q('お名前を教えてください', null,
+          return Q('お名前を教えてください',
+            form.visitType === 'existing'
+              ? '同じ苗字のお客様との取り違えを防ぐため、フルネームでお願いします。'
+              : null,
             h('div', { className: 'flex gap-3' },
               h('div', { className: 'flex-1' },
                 h(Field, { label: '姓' },
@@ -914,7 +905,7 @@
             if (value !== '' && value != null) rows.push({ label, value, step: key, editable: editable !== false });
           };
           add('来店種別', isNew ? '新規' : '以前にも来店', 'visitType', false);
-          add('お名前', form.lastName + (isNew && form.firstName ? ' ' + form.firstName : '') + ' 様', 'name');
+          add('お名前', form.lastName + (form.firstName ? ' ' + form.firstName : '') + ' 様', 'name');
           if (isNew) {
             const age = computeAge();
             if (form.birthYear) add('生年月日', form.birthYear + '/' + pad(form.birthMonth) + '/' + pad(form.birthDay) + (age !== '' ? '（' + age + '歳）' : ''), 'birth');
