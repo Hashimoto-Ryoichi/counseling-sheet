@@ -520,7 +520,8 @@
           color ? form.colorGray : '', color ? form.colorRange : '',
           color ? form.colorHistory.join('、') : '', color ? form.colorSafety : '',
           perm ? form.permFinish : '', straight ? form.straightRange : '', quality ? form.qualityFocus : '',
-          getStyleStr(), sourceStr,
+          // カルテ側では写真の送付案内（お客様向け文言）は不要なので枚数表記だけにする
+          getStyleStr().replace('（別途お送りします）', '').replace('（カルテ保存済み）', ''), sourceStr,
         ];
 
         const nameForFile = (form.lastName + form.firstName) || 'お客様';
