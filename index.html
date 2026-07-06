@@ -147,7 +147,9 @@
     // ====== カラー深掘り（薬剤の事前発注用） ======
     // カラー系メニューを選んだ人にだけ、追加で色の希望を伺う。全問「おまかせ／わからない」付き。
     const COLOR_MENUS = ['カラー（白髪染め）', 'カラー（ファッションカラー）', 'ハイライト'];
-    const COLOR_STEPS = ['colorTone', 'colorBright', 'colorGray', 'colorRange', 'colorHistory', 'colorSafety'];
+    // 「染める範囲」を最初に聞き、リタッチ（根元だけ）の場合は既存色に合わせるため「なりたい色」「明るさ」をスキップする
+    const RETOUCH = '根元だけ（伸びた部分・リタッチ）';
+    const COLOR_STEPS = ['colorRange', 'colorTone', 'colorBright', 'colorGray', 'colorHistory', 'colorSafety'];
 
     const COLOR_TONE = [
       'ベージュ系（やわらかい印象）',
@@ -172,7 +174,7 @@
       'しっかり染めたい',
     ];
     const COLOR_RANGE = [
-      '根元だけ（伸びた部分・リタッチ）',
+      RETOUCH,
       '髪全体',
       '毛先メイン（グラデ・ハイライトなど）',
       'わからない・おまかせ',
@@ -233,9 +235,13 @@
     ];
 
     // ====== ステップ構成（来店種別＋希望メニューで分岐） ======
-    function getSteps(visitType, menu) {
+    function getSteps(visitType, menu, colorRange) {
       const m = menu || [];
-      const colorBlock = m.some((x) => COLOR_MENUS.includes(x)) ? COLOR_STEPS : [];
+      let colorBlock = m.some((x) => COLOR_MENUS.includes(x)) ? COLOR_STEPS : [];
+      // リタッチは既存色に合わせるため「なりたい色」「明るさ」は聞かない
+      if (colorRange === RETOUCH) {
+        colorBlock = colorBlock.filter((s) => s !== 'colorTone' && s !== 'colorBright');
+      }
       const waveBlock = [];
       if (m.includes('パーマ')) waveBlock.push('permFinish');
       if (m.includes('縮毛矯正')) waveBlock.push('straightRange');
@@ -356,7 +362,7 @@
       const topRef = useRef(null);
       const photoInputRef = useRef(null);
 
-      const steps = getSteps(form.visitType, form.menu);
+      const steps = getSteps(form.visitType, form.menu, form.colorRange);
       const step = steps[stepIndex];
       const totalQuestions = steps.length - 1;     // 完了画面を除く
       const isComplete = step === 'complete';
@@ -593,10 +599,10 @@
         L.push('ご希望メニュー：' + expandOther(form.menu, form.menuOther));
         if (color) {
           L.push('― カラーのご希望 ―');
+          if (form.colorRange) L.push('・範囲：' + form.colorRange);
           if (form.colorTone) L.push('・なりたい色：' + form.colorTone);
           if (form.colorBright) L.push('・明るさ：' + form.colorBright);
           if (form.colorGray) L.push('・白髪：' + form.colorGray);
-          if (form.colorRange) L.push('・範囲：' + form.colorRange);
           if (form.colorHistory.length) L.push('・今の髪の状態：' + form.colorHistory.join('、'));
           if (form.colorSafety) L.push('・カラーかぶれ経験：' + form.colorSafety);
         }
@@ -908,7 +914,7 @@
         // ===== カラー深掘り（カラー系メニュー選択時のみ表示） =====
         if (step === 'colorTone') {
           return Q('なりたい髪色の方向は？',
-            'カラーをご希望なので、当日までに薬剤をご用意するために少しだけ伺います。わからなければ「おまかせ」で大丈夫です。',
+            'わからなければ「おまかせ」で大丈夫です。',
             h('div', {}, COLOR_TONE.map((o) => h(OptionCard, {
               key: o, label: o, selected: form.colorTone === o, onClick: () => set('colorTone', o),
             }))));
@@ -926,9 +932,12 @@
             }))));
         }
         if (step === 'colorRange') {
-          return Q('染めたい範囲は？', null,
+          return Q('染めたい範囲は？',
+            'カラーをご希望なので、当日までに薬剤をご用意するために少しだけ伺います。',
             h('div', {}, COLOR_RANGE.map((o) => h(OptionCard, {
-              key: o, label: o, selected: form.colorRange === o, onClick: () => set('colorRange', o),
+              key: o, label: o, selected: form.colorRange === o,
+              // リタッチは色・明るさを聞かないため、過去に選んだ回答が残らないようクリアする
+              onClick: () => setForm((p) => (o === RETOUCH ? { ...p, colorRange: o, colorTone: '', colorBright: '' } : { ...p, colorRange: o })),
             }))));
         }
         if (step === 'colorHistory') {
@@ -1049,10 +1058,10 @@
           add('髪の悩み', form.hairConcern.join('、'), 'hairConcern');
           add('ご希望メニュー', expandOther(form.menu, form.menuOther), 'menu');
           if (color) {
+            add('染める範囲', form.colorRange, 'colorRange');
             add('なりたい色', form.colorTone, 'colorTone');
             add('明るさ', form.colorBright, 'colorBright');
             add('白髪', form.colorGray, 'colorGray');
-            add('染める範囲', form.colorRange, 'colorRange');
             add('今の髪の状態', form.colorHistory.join('、'), 'colorHistory');
             add('カラーかぶれ経験', form.colorSafety, 'colorSafety');
           }
