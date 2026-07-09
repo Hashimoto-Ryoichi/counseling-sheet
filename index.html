@@ -51,10 +51,11 @@
     ::placeholder { color: #8a8a82; }
     /* スクロールバー控えめ */
     ::-webkit-scrollbar { width: 0; height: 0; }
-    /* 文字サイズ切替（zoomで画面全体をスケール／px固定レイアウト対応） */
-    html[data-font-size="normal"] { zoom: 1; }
-    html[data-font-size="large"]  { zoom: 1.15; }
-    html[data-font-size="xlarge"] { zoom: 1.3; }
+    /* 文字サイズ切替（zoomで画面全体をスケール／px固定レイアウト対応）
+       ※iOS Safariは<html>へのzoomが効かないため#root（子要素）へ適用 */
+    #root[data-font-size="normal"] { zoom: 1; }
+    #root[data-font-size="large"]  { zoom: 1.15; }
+    #root[data-font-size="xlarge"] { zoom: 1.3; }
     .fs-selector { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
     .fs-selector-lbl { font-size: 11px; color: #9a9a92; letter-spacing: .05em; margin-right: 2px; }
     .fs-btn { background: transparent; border: 1px solid #3a3a3a; color: #9a9a92; font-family: inherit; padding: 4px 12px; border-radius: 999px; cursor: pointer; transition: all .2s; line-height: 1; -webkit-tap-highlight-color: transparent; }
@@ -401,9 +402,10 @@
         if (stepIndex > steps.length - 1) setStepIndex(steps.length - 1);
       }, [steps.length]);
 
-      // 文字サイズをhtml要素へ反映＋保存
+      // 文字サイズを#root要素へ反映＋保存（iOS Safari対応でhtmlではなく#root）
       useEffect(() => {
-        document.documentElement.dataset.fontSize = fontSize;
+        const rootEl = document.getElementById('root');
+        if (rootEl) rootEl.dataset.fontSize = fontSize;
         try { localStorage.setItem(FONT_SIZE_KEY, fontSize); } catch (e) {}
       }, [fontSize]);
 
