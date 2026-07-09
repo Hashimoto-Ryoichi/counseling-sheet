@@ -51,6 +51,17 @@
     ::placeholder { color: #8a8a82; }
     /* スクロールバー控えめ */
     ::-webkit-scrollbar { width: 0; height: 0; }
+    /* 文字サイズ切替（zoomで画面全体をスケール／px固定レイアウト対応） */
+    html[data-font-size="normal"] { zoom: 1; }
+    html[data-font-size="large"]  { zoom: 1.15; }
+    html[data-font-size="xlarge"] { zoom: 1.3; }
+    .fs-selector { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+    .fs-selector-lbl { font-size: 11px; color: #9a9a92; letter-spacing: .05em; margin-right: 2px; }
+    .fs-btn { background: transparent; border: 1px solid #3a3a3a; color: #9a9a92; font-family: inherit; padding: 4px 12px; border-radius: 999px; cursor: pointer; transition: all .2s; line-height: 1; -webkit-tap-highlight-color: transparent; }
+    .fs-btn-normal { font-size: 12px; }
+    .fs-btn-large  { font-size: 14px; }
+    .fs-btn-xlarge { font-size: 16px; }
+    .fs-btn.active { background: #c9a96e; border-color: #c9a96e; color: #1a1a1a; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -70,6 +81,14 @@
       goldSoft: 'rgba(201,169,110,0.12)',
       muted: '#9a9a92',
     };
+
+    // ====== 文字サイズ切替（シャンプー診断と同方式） ======
+    const FONT_SIZE_KEY = 'counselingSheetFontSize';
+    const FONT_SIZE_OPTIONS = [
+      { key: 'normal', label: '標準', btnClass: 'fs-btn-normal' },
+      { key: 'large',  label: '大',   btnClass: 'fs-btn-large' },
+      { key: 'xlarge', label: '特大', btnClass: 'fs-btn-xlarge' },
+    ];
 
     // ====== Lucideアイコン（Reactと衝突しない安全ラッパー） ======
     function Icon({ name, size = 20, color = 'currentColor', strokeWidth = 2, style = {} }) {
@@ -359,6 +378,9 @@
       const setKarteStatus = (v) => { karteStatusRef.current = v; _setKarteStatus(v); };
       const [editingFromReview, setEditingFromReview] = useState(false);
       const [photos, setPhotos] = useState([]);
+      const [fontSize, setFontSize] = useState(() => {
+        try { return localStorage.getItem(FONT_SIZE_KEY) || 'normal'; } catch (e) { return 'normal'; }
+      });
       const topRef = useRef(null);
       const photoInputRef = useRef(null);
 
@@ -378,6 +400,12 @@
       useEffect(() => {
         if (stepIndex > steps.length - 1) setStepIndex(steps.length - 1);
       }, [steps.length]);
+
+      // 文字サイズをhtml要素へ反映＋保存
+      useEffect(() => {
+        document.documentElement.dataset.fontSize = fontSize;
+        try { localStorage.setItem(FONT_SIZE_KEY, fontSize); } catch (e) {}
+      }, [fontSize]);
 
       const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -1186,7 +1214,17 @@
               h('span', { style: { fontSize: '13px', letterSpacing: '0.2em', color: C.gold, fontWeight: 500 } }, 'RYOICHI HASHIMOTO'),
             ),
             h('p', { className: 'mt-2', style: { fontSize: '15px', color: C.text, fontWeight: 500 } }, 'ご来店前カウンセリングシート'),
-            h('p', { className: 'mt-1', style: { fontSize: '12px', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。')
+            h('p', { className: 'mt-1', style: { fontSize: '12px', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。'),
+            h('div', { className: 'fs-selector', role: 'group', 'aria-label': '文字サイズの選択' },
+              h('span', { className: 'fs-selector-lbl' }, '文字サイズ'),
+              FONT_SIZE_OPTIONS.map((opt) => h('button', {
+                key: opt.key,
+                type: 'button',
+                className: 'fs-btn ' + opt.btnClass + (fontSize === opt.key ? ' active' : ''),
+                'aria-pressed': fontSize === opt.key,
+                onClick: (e) => { e.currentTarget.blur(); setFontSize(opt.key); },
+              }, opt.label))
+            )
           ),
 
           // 進捗バー
