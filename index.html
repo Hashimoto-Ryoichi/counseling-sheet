@@ -54,11 +54,11 @@
     /* 文字サイズ切替（zoomで画面全体をスケール／px固定レイアウト対応）
        ※iOS Safariは<html>へのzoomが効かないため#root（子要素）へ適用 */
     #root[data-font-size="normal"] { zoom: 1; }
-    #root[data-font-size="large"]  { zoom: 1.15; }
-    #root[data-font-size="xlarge"] { zoom: 1.3; }
+    #root[data-font-size="large"]  { zoom: 1.25; }
+    #root[data-font-size="xlarge"] { zoom: 1.5; }
     .fs-selector { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
     .fs-selector-lbl { font-size: 11px; color: #9a9a92; letter-spacing: .05em; margin-right: 2px; }
-    .fs-btn { background: transparent; border: 1px solid #3a3a3a; color: #9a9a92; font-family: inherit; padding: 4px 12px; border-radius: 999px; cursor: pointer; transition: all .2s; line-height: 1; -webkit-tap-highlight-color: transparent; }
+    .fs-btn { background: transparent; border: 1px solid #3a3a3a; color: #9a9a92; font-family: inherit; padding: 10px 16px; border-radius: 999px; cursor: pointer; transition: all .2s; line-height: 1; -webkit-tap-highlight-color: transparent; }
     .fs-btn-normal { font-size: 12px; }
     .fs-btn-large  { font-size: 14px; }
     .fs-btn-xlarge { font-size: 16px; }
@@ -333,7 +333,7 @@
       return h('div', { className: 'mb-5' },
         h('label', { className: 'block mb-2', style: { fontSize: '14px', color: C.muted } },
           label,
-          optional ? h('span', { style: { color: C.muted, marginLeft: 6, fontSize: '12px' } }, '（任意）') : null
+          optional ? h('span', { style: { color: C.muted, marginLeft: 6, fontSize: '13px' } }, '（任意）') : null
         ),
         children
       );
@@ -848,7 +848,7 @@
                   onChange: (e) => set('email', e.target.value), style: inputStyle,
                 })
               ),
-              h('p', { style: { fontSize: '11px', color: C.muted, lineHeight: 1.7 } },
+              h('p', { style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
                 '※ご連絡先は、ご予約確認と施術のご連絡のみに使用します。')
             )
           );
@@ -1055,7 +1055,7 @@
                   )
                 : null,
               photos.length
-                ? h('p', { className: 'mt-3', style: { fontSize: '11px', color: C.muted, lineHeight: 1.7 } },
+                ? h('p', { className: 'mt-3', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
                     KARTE_ENDPOINT
                       ? '※お写真は、最後の送信時に自動で橋元へ届きます。'
                       : '※お写真は、送信後に' + sendChannel() + 'にも貼り付けてお送りください。')
@@ -1108,7 +1108,7 @@
                 style: { borderBottom: '1px solid ' + C.border },
               },
                 h('div', { className: 'flex-1' },
-                  h('div', { style: { fontSize: '12px', color: C.muted, marginBottom: 2 } }, r.label),
+                  h('div', { style: { fontSize: '13px', color: C.muted, marginBottom: 2 } }, r.label),
                   h('div', { style: { fontSize: '15px', color: C.text, lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, r.value)
                 ),
                 r.editable
@@ -1148,7 +1148,7 @@
               'LINEで橋元に送る'
             ),
             form.visitType === 'new' && !lineStatus
-              ? h('p', { className: 'mt-3', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
+              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.muted, lineHeight: 1.7 } },
                   'はじめての方は、友だち追加のあとにトークが開きます。')
               : null,
             lineStatus
@@ -1193,7 +1193,7 @@
               ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.muted } }, '✓ CSVを保存しました。')
               : null,
 
-            h('p', { className: 'mt-6', style: { fontSize: '11px', color: C.muted, lineHeight: 1.7 } },
+            h('p', { className: 'mt-6', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
               '※いただいた情報は、施術のご準備とご連絡のみに使用します。')
           );
         }
@@ -1216,7 +1216,7 @@
               h('span', { style: { fontSize: '13px', letterSpacing: '0.2em', color: C.gold, fontWeight: 500 } }, 'RYOICHI HASHIMOTO'),
             ),
             h('p', { className: 'mt-2', style: { fontSize: '15px', color: C.text, fontWeight: 500 } }, 'ご来店前カウンセリングシート'),
-            h('p', { className: 'mt-1', style: { fontSize: '12px', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。'),
+            h('p', { className: 'mt-1', style: { fontSize: '13px', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。'),
             h('div', { className: 'fs-selector', role: 'group', 'aria-label': '文字サイズの選択' },
               h('span', { className: 'fs-selector-lbl' }, '文字サイズ'),
               FONT_SIZE_OPTIONS.map((opt) => h('button', {
@@ -1233,8 +1233,8 @@
           !isComplete
             ? h('div', { className: 'px-5 pb-4' },
                 h('div', { className: 'flex items-center justify-between mb-2' },
-                  h('span', { style: { fontSize: '12px', color: C.muted } }, step === 'review' ? '最終確認' : '質問'),
-                  h('span', { style: { fontSize: '12px', color: C.gold, fontWeight: 500 } }, step === 'review' ? '' : questionNo + ' / ' + totalQuestions)
+                  h('span', { style: { fontSize: '13px', color: C.muted } }, step === 'review' ? '最終確認' : '質問'),
+                  h('span', { style: { fontSize: '13px', color: C.gold, fontWeight: 500 } }, step === 'review' ? '' : questionNo + ' / ' + totalQuestions)
                 ),
                 h('div', { style: { height: 4, borderRadius: 999, backgroundColor: C.border, overflow: 'hidden' } },
                   h('div', {
