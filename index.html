@@ -36,9 +36,9 @@
       -webkit-font-smoothing: antialiased;
       margin: 0;
     }
-    /* iOSの自動ズーム防止：入力は16px以上を強制 */
+    /* iOSの自動ズーム防止：入力は16px以上を強制（標準時1rem=16px・拡大時はそれ以上） */
     input, select, textarea {
-      font-size: 16px !important;
+      font-size: 1rem !important;
       font-family: inherit;
     }
     select option { color: #111; }
@@ -51,17 +51,16 @@
     ::placeholder { color: #8a8a82; }
     /* スクロールバー控えめ */
     ::-webkit-scrollbar { width: 0; height: 0; }
-    /* 文字サイズ切替（zoomで画面全体をスケール／px固定レイアウト対応）
-       ※iOS Safariは<html>へのzoomが効かないため#root（子要素）へ適用 */
-    #root[data-font-size="normal"] { zoom: 1; }
-    #root[data-font-size="large"]  { zoom: 1.25; }
-    #root[data-font-size="xlarge"] { zoom: 1.5; }
+    /* 文字サイズ切替（シャンプー診断と同方式：html基準サイズ×rem。zoomはiOS実機で効かなかったため廃止） */
+    html[data-font-size="normal"] { font-size: 16px; }
+    html[data-font-size="large"]  { font-size: 20px; }
+    html[data-font-size="xlarge"] { font-size: 24px; }
     .fs-selector { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
-    .fs-selector-lbl { font-size: 11px; color: #9a9a92; letter-spacing: .05em; margin-right: 2px; }
+    .fs-selector-lbl { font-size: 0.6875rem; color: #9a9a92; letter-spacing: .05em; margin-right: 2px; }
     .fs-btn { background: transparent; border: 1px solid #3a3a3a; color: #9a9a92; font-family: inherit; padding: 10px 16px; border-radius: 999px; cursor: pointer; transition: all .2s; line-height: 1; -webkit-tap-highlight-color: transparent; }
-    .fs-btn-normal { font-size: 12px; }
-    .fs-btn-large  { font-size: 14px; }
-    .fs-btn-xlarge { font-size: 16px; }
+    .fs-btn-normal { font-size: 0.75rem; }
+    .fs-btn-large  { font-size: 0.875rem; }
+    .fs-btn-xlarge { font-size: 1rem; }
     .fs-btn.active { background: #c9a96e; border-color: #c9a96e; color: #1a1a1a; font-weight: 700; }
   </style>
 </head>
@@ -291,7 +290,7 @@
           backgroundColor: selected ? C.goldSoft : C.card,
           border: '1.5px solid ' + (selected ? C.gold : C.border),
           color: C.text,
-          fontSize: '16px',
+          fontSize: '1rem',
           lineHeight: '1.5',
         },
       },
@@ -322,8 +321,8 @@
           },
         }, h(Icon, { name: icon, size: 24, color: C.gold })),
         h('span', { className: 'text-left' },
-          h('span', { className: 'block', style: { fontSize: '17px', fontWeight: 500 } }, title),
-          h('span', { className: 'block mt-1', style: { fontSize: '13px', color: C.muted } }, sub)
+          h('span', { className: 'block', style: { fontSize: '1.0625rem', fontWeight: 500 } }, title),
+          h('span', { className: 'block mt-1', style: { fontSize: '0.8125rem', color: C.muted } }, sub)
         )
       );
     }
@@ -331,9 +330,9 @@
     // ====== UI部品：入力ラベル ======
     function Field({ label, children, optional }) {
       return h('div', { className: 'mb-5' },
-        h('label', { className: 'block mb-2', style: { fontSize: '14px', color: C.muted } },
+        h('label', { className: 'block mb-2', style: { fontSize: '0.875rem', color: C.muted } },
           label,
-          optional ? h('span', { style: { color: C.muted, marginLeft: 6, fontSize: '13px' } }, '（任意）') : null
+          optional ? h('span', { style: { color: C.muted, marginLeft: 6, fontSize: '0.8125rem' } }, '（任意）') : null
         ),
         children
       );
@@ -402,10 +401,9 @@
         if (stepIndex > steps.length - 1) setStepIndex(steps.length - 1);
       }, [steps.length]);
 
-      // 文字サイズを#root要素へ反映＋保存（iOS Safari対応でhtmlではなく#root）
+      // 文字サイズを<html>の基準フォントサイズへ反映＋保存（シャンプー診断と同方式）
       useEffect(() => {
-        const rootEl = document.getElementById('root');
-        if (rootEl) rootEl.dataset.fontSize = fontSize;
+        document.documentElement.dataset.fontSize = fontSize;
         try { localStorage.setItem(FONT_SIZE_KEY, fontSize); } catch (e) {}
       }, [fontSize]);
 
@@ -760,8 +758,8 @@
         // タイトル＋本文を返すヘルパー
         const Q = (title, sub, body) =>
           h('div', { className: 'fade-step', key: step },
-            h('h2', { style: { fontSize: '20px', fontWeight: 700, lineHeight: 1.5 } }, title),
-            sub ? h('p', { className: 'mt-2 mb-6', style: { fontSize: '13px', color: C.muted } }, sub)
+            h('h2', { style: { fontSize: '1.25rem', fontWeight: 700, lineHeight: 1.5 } }, title),
+            sub ? h('p', { className: 'mt-2 mb-6', style: { fontSize: '0.8125rem', color: C.muted } }, sub)
                 : h('div', { className: 'mb-6' }),
             body
           );
@@ -829,7 +827,7 @@
                 days.map((d) => h('option', { key: d, value: d }, d + '日'))
               )
             ),
-            age !== '' ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold } }, '年齢：' + age + '歳') : null
+            age !== '' ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.gold } }, '年齢：' + age + '歳') : null
           );
         }
 
@@ -848,7 +846,7 @@
                   onChange: (e) => set('email', e.target.value), style: inputStyle,
                 })
               ),
-              h('p', { style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
+              h('p', { style: { fontSize: '0.75rem', color: C.muted, lineHeight: 1.7 } },
                 '※ご連絡先は、ご予約確認と施術のご連絡のみに使用します。')
             )
           );
@@ -1017,7 +1015,7 @@
                 style: {
                   backgroundColor: form.styleOmakase ? C.goldSoft : C.card,
                   border: '1.5px solid ' + (form.styleOmakase ? C.gold : C.border),
-                  color: C.text, fontSize: '16px',
+                  color: C.text, fontSize: '1rem',
                 },
               },
                 h('span', {}, 'おまかせ（プロにお任せ）'),
@@ -1038,7 +1036,7 @@
               h('button', {
                 type: 'button', onClick: () => photoInputRef.current && photoInputRef.current.click(),
                 className: 'w-full rounded-xl mt-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-                style: { backgroundColor: 'transparent', color: C.text, border: '1.5px dashed ' + C.border, padding: '14px', fontSize: '15px' },
+                style: { backgroundColor: 'transparent', color: C.text, border: '1.5px dashed ' + C.border, padding: '14px', fontSize: '0.9375rem' },
               },
                 h(Icon, { name: 'image', size: 18, color: C.gold }),
                 '写真を選ぶ'
@@ -1049,13 +1047,13 @@
                       h('img', { src: p.url, style: { width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid ' + C.border, display: 'block' } }),
                       h('button', {
                         type: 'button', onClick: () => removePhoto(i),
-                        style: { position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 999, background: C.base, color: C.text, border: '1px solid ' + C.border, fontSize: 13, lineHeight: '20px', cursor: 'pointer' },
+                        style: { position: 'absolute', top: -8, right: -8, width: '1.375rem', height: '1.375rem', borderRadius: 999, background: C.base, color: C.text, border: '1px solid ' + C.border, fontSize: '0.8125rem', lineHeight: '1.25rem', cursor: 'pointer' },
                       }, '×')
                     ))
                   )
                 : null,
               photos.length
-                ? h('p', { className: 'mt-3', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
+                ? h('p', { className: 'mt-3', style: { fontSize: '0.75rem', color: C.muted, lineHeight: 1.7 } },
                     KARTE_ENDPOINT
                       ? '※お写真は、最後の送信時に自動で橋元へ届きます。'
                       : '※お写真は、送信後に' + sendChannel() + 'にも貼り付けてお送りください。')
@@ -1108,14 +1106,14 @@
                 style: { borderBottom: '1px solid ' + C.border },
               },
                 h('div', { className: 'flex-1' },
-                  h('div', { style: { fontSize: '13px', color: C.muted, marginBottom: 2 } }, r.label),
-                  h('div', { style: { fontSize: '15px', color: C.text, lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, r.value)
+                  h('div', { style: { fontSize: '0.8125rem', color: C.muted, marginBottom: 2 } }, r.label),
+                  h('div', { style: { fontSize: '0.9375rem', color: C.text, lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, r.value)
                 ),
                 r.editable
                   ? h('button', {
                       type: 'button', onClick: () => goToStep(r.step),
                       className: 'active:scale-[0.95] transition-all',
-                      style: { flex: '0 0 auto', fontSize: '13px', color: C.gold, padding: '4px 8px', background: 'transparent', border: 'none', cursor: 'pointer' },
+                      style: { flex: '0 0 auto', fontSize: '0.8125rem', color: C.gold, padding: '4px 8px', background: 'transparent', border: 'none', cursor: 'pointer' },
                     }, '修正')
                   : null
               ))
@@ -1132,8 +1130,8 @@
                 backgroundColor: C.goldSoft, display: 'flex', alignItems: 'center', justifyContent: 'center',
               },
             }, h(Icon, { name: 'check', size: 36, color: C.gold })),
-            h('h2', { style: { fontSize: '20px', fontWeight: 700 } }, 'ありがとうございました'),
-            h('p', { className: 'mt-3', style: { fontSize: '14px', color: C.muted, lineHeight: 1.9 } },
+            h('h2', { style: { fontSize: '1.25rem', fontWeight: 700 } }, 'ありがとうございました'),
+            h('p', { className: 'mt-3', style: { fontSize: '0.875rem', color: C.muted, lineHeight: 1.9 } },
               'いただいた内容をもとに、担当の橋元が', h('br'),
               (needsChemical ? '当日まで薬剤や仕上がりの準備を進めます。' : '当日までに仕上がりのご準備を進めます。'), h('br'),
               '安心してご来店ください。'),
@@ -1142,23 +1140,23 @@
             h('button', {
               type: 'button', onClick: sendViaLine,
               className: 'w-full rounded-xl mt-8 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-              style: { backgroundColor: '#06C755', color: '#ffffff', fontWeight: 700, padding: '16px', fontSize: '16px' },
+              style: { backgroundColor: '#06C755', color: '#ffffff', fontWeight: 700, padding: '16px', fontSize: '1rem' },
             },
               h(Icon, { name: 'message-circle', size: 20, color: '#ffffff' }),
               'LINEで橋元に送る'
             ),
             form.visitType === 'new' && !lineStatus
-              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.muted, lineHeight: 1.7 } },
+              ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.muted, lineHeight: 1.7 } },
                   'はじめての方は、友だち追加のあとにトークが開きます。')
               : null,
             lineStatus
-              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
+              ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.gold, lineHeight: 1.7 } },
                   lineStatus === 'prefill'
                     ? '✓ LINEが開いたら、入力欄の内容をそのまま送信してください。（本文はコピー済みです。もし空欄のときは長押しで貼り付けてください）'
                     : '✓ 本文をコピーしました。開いたLINEのトークに貼り付けて送信してください。')
               : null,
             photos.length
-              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
+              ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.gold, lineHeight: 1.7 } },
                   karteStatus === 'saved'
                     ? '📷 参考写真（' + photos.length + '枚）は自動で保存されました。LINEへの貼り付けは不要です。'
                     : karteStatus === 'saving'
@@ -1170,13 +1168,13 @@
             h('button', {
               type: 'button', onClick: sendSummary,
               className: 'w-full rounded-xl mt-4 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-              style: { backgroundColor: 'transparent', color: C.text, fontWeight: 600, padding: '15px', fontSize: '15px', border: '1.5px solid ' + C.border },
+              style: { backgroundColor: 'transparent', color: C.text, fontWeight: 600, padding: '15px', fontSize: '0.9375rem', border: '1.5px solid ' + C.border },
             },
               h(Icon, { name: 'send', size: 18, color: C.text }),
               'その他の方法で送る／コピー'
             ),
             copied
-              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.gold, lineHeight: 1.7 } },
+              ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.gold, lineHeight: 1.7 } },
                   '✓ 送信用の内容をコピーしました。' + sendChannel() + 'に貼り付けて橋元へお送りください。')
               : null,
 
@@ -1184,16 +1182,16 @@
             h('button', {
               type: 'button', onClick: buildAndDownloadCSV,
               className: 'w-full rounded-xl mt-4 flex items-center justify-center gap-2 active:scale-[0.98] transition-all',
-              style: { backgroundColor: 'transparent', color: C.text, fontWeight: 600, padding: '15px', fontSize: '15px', border: '1.5px solid ' + C.border },
+              style: { backgroundColor: 'transparent', color: C.text, fontWeight: 600, padding: '15px', fontSize: '0.9375rem', border: '1.5px solid ' + C.border },
             },
               h(Icon, { name: 'download', size: 18, color: C.text }),
               'CSVで保存（控え用）'
             ),
             saved
-              ? h('p', { className: 'mt-3', style: { fontSize: '13px', color: C.muted } }, '✓ CSVを保存しました。')
+              ? h('p', { className: 'mt-3', style: { fontSize: '0.8125rem', color: C.muted } }, '✓ CSVを保存しました。')
               : null,
 
-            h('p', { className: 'mt-6', style: { fontSize: '12px', color: C.muted, lineHeight: 1.7 } },
+            h('p', { className: 'mt-6', style: { fontSize: '0.75rem', color: C.muted, lineHeight: 1.7 } },
               '※いただいた情報は、施術のご準備とご連絡のみに使用します。')
           );
         }
@@ -1213,10 +1211,10 @@
           h('header', { className: 'px-5 pt-6 pb-3' },
             h('div', { className: 'flex items-center gap-2' },
               h(Icon, { name: 'scissors', size: 18, color: C.gold }),
-              h('span', { style: { fontSize: '13px', letterSpacing: '0.2em', color: C.gold, fontWeight: 500 } }, 'RYOICHI HASHIMOTO'),
+              h('span', { style: { fontSize: '0.8125rem', letterSpacing: '0.2em', color: C.gold, fontWeight: 500 } }, 'RYOICHI HASHIMOTO'),
             ),
-            h('p', { className: 'mt-2', style: { fontSize: '15px', color: C.text, fontWeight: 500 } }, 'ご来店前カウンセリングシート'),
-            h('p', { className: 'mt-1', style: { fontSize: '13px', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。'),
+            h('p', { className: 'mt-2', style: { fontSize: '0.9375rem', color: C.text, fontWeight: 500 } }, 'ご来店前カウンセリングシート'),
+            h('p', { className: 'mt-1', style: { fontSize: '0.8125rem', color: C.muted, lineHeight: 1.6 } }, 'あなたに似合うスタイルを、一緒に見つけるために。'),
             h('div', { className: 'fs-selector', role: 'group', 'aria-label': '文字サイズの選択' },
               h('span', { className: 'fs-selector-lbl' }, '文字サイズ'),
               FONT_SIZE_OPTIONS.map((opt) => h('button', {
@@ -1233,8 +1231,8 @@
           !isComplete
             ? h('div', { className: 'px-5 pb-4' },
                 h('div', { className: 'flex items-center justify-between mb-2' },
-                  h('span', { style: { fontSize: '13px', color: C.muted } }, step === 'review' ? '最終確認' : '質問'),
-                  h('span', { style: { fontSize: '13px', color: C.gold, fontWeight: 500 } }, step === 'review' ? '' : questionNo + ' / ' + totalQuestions)
+                  h('span', { style: { fontSize: '0.8125rem', color: C.muted } }, step === 'review' ? '最終確認' : '質問'),
+                  h('span', { style: { fontSize: '0.8125rem', color: C.gold, fontWeight: 500 } }, step === 'review' ? '' : questionNo + ' / ' + totalQuestions)
                 ),
                 h('div', { style: { height: 4, borderRadius: 999, backgroundColor: C.border, overflow: 'hidden' } },
                   h('div', {
@@ -1260,7 +1258,7 @@
                   ? h('button', {
                       type: 'button', onClick: back,
                       className: 'flex items-center justify-center gap-1 rounded-xl active:scale-[0.98] transition-all',
-                      style: { padding: '14px 18px', color: C.text, border: '1.5px solid ' + C.border, backgroundColor: 'transparent', fontSize: '15px' },
+                      style: { padding: '14px 18px', color: C.text, border: '1.5px solid ' + C.border, backgroundColor: 'transparent', fontSize: '0.9375rem' },
                     },
                       h(Icon, { name: 'chevron-left', size: 18, color: C.text }), '戻る')
                   : null,
@@ -1270,7 +1268,7 @@
                       type: 'button', onClick: next, disabled: !isValid(step),
                       className: 'flex-1 flex items-center justify-center gap-2 rounded-xl active:scale-[0.98] transition-all',
                       style: {
-                        padding: '14px', fontWeight: 700, fontSize: '16px',
+                        padding: '14px', fontWeight: 700, fontSize: '1rem',
                         backgroundColor: isValid(step) ? C.gold : C.border,
                         color: isValid(step) ? '#1a1a1a' : C.muted,
                         cursor: isValid(step) ? 'pointer' : 'not-allowed',
