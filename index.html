@@ -153,6 +153,15 @@
       'その他',
     ];
 
+    // ====== 髪の長さ（薬剤量・施術時間の目安／ロング料金の判断材料） ======
+    const HAIR_LENGTH = [
+      { label: 'ベリーショート', sub: '耳が見える' },
+      { label: 'ショート', sub: '耳下〜アゴ下' },
+      { label: 'ミディアム', sub: 'アゴ下〜肩' },
+      { label: 'セミロング', sub: '肩〜胸' },
+      { label: 'ロング', sub: '胸より下' },
+    ];
+
     // 排他（「とくになし」系）の値
     const NONE = {
       allergy: 'とくになし',
@@ -269,10 +278,10 @@
         // 既存のお客様は頭皮・髪質・カラー履歴を橋元さんが把握済みのため scalp / hairConcern / colorHistory は省略。
         // 代わりに「前回からの変化」（他店施術・セルフカラー）を聞く。
         const colorBlockExisting = colorBlock.filter((s) => s !== 'colorHistory');
-        return ['visitType', 'name', 'interimChange', 'menu', ...colorBlockExisting, ...waveBlock, 'styleImage', 'review', 'complete'];
+        return ['visitType', 'name', 'interimChange', 'menu', 'hairLength', ...colorBlockExisting, ...waveBlock, 'styleImage', 'review', 'complete'];
       }
       // 新規 ＋ 未選択時のデフォルト
-      return ['visitType', 'name', 'birth', 'contact', 'source', 'allergy', 'history', 'scalp', 'hairConcern', 'menu', ...colorBlock, ...waveBlock, 'styleImage', 'review', 'complete'];
+      return ['visitType', 'name', 'birth', 'contact', 'source', 'allergy', 'history', 'scalp', 'hairConcern', 'menu', 'hairLength', ...colorBlock, ...waveBlock, 'styleImage', 'review', 'complete'];
     }
 
     const pad = (n) => String(n).padStart(2, '0');
@@ -364,6 +373,7 @@
         hairConcern: [],
         interimChange: [],
         menu: [], menuOther: '',
+        hairLength: '',
         colorTone: '', colorBright: '', colorGray: '', colorRange: '',
         colorHistory: [], colorSafety: '',
         permFinish: '', straightRange: '', qualityFocus: '',
@@ -474,6 +484,7 @@
           case 'interimChange': return form.interimChange.length > 0;
           case 'menu':
             return form.menu.length > 0 && (!form.menu.includes('その他') || form.menuOther.trim().length > 0);
+          case 'hairLength': return !!form.hairLength;
           case 'colorTone': return !!form.colorTone;
           case 'colorBright': return !!form.colorBright;
           case 'colorGray': return !!form.colorGray;
@@ -539,7 +550,7 @@
         const headers = [
           '記入日時', '来店種別', '姓', '名', '生年月日', '年齢',
           '電話番号', 'メールアドレス', 'アレルギー・敏感肌', '施術履歴（直近1年）', '前回からの変化',
-          '頭皮の状態', '髪の悩み', '希望メニュー',
+          '頭皮の状態', '髪の悩み', '希望メニュー', '髪の長さ',
           'カラー：なりたい色', 'カラー：明るさ', 'カラー：白髪', 'カラー：染める範囲',
           'カラー：今の髪の状態', 'カラー：かぶれ経験',
           'パーマ：仕上がり', '縮毛矯正：範囲', '髪質改善：希望',
@@ -549,7 +560,7 @@
           dateTime, visitLabel, form.lastName, form.firstName,
           birthStr, ageStr,
           isNew ? form.phone : '', isNew ? form.email : '',
-          allergyStr, historyStr, isNew ? '' : form.interimChange.join('、'), scalpStr, hairStr, menuStr,
+          allergyStr, historyStr, isNew ? '' : form.interimChange.join('、'), scalpStr, hairStr, menuStr, form.hairLength,
           color ? form.colorTone : '', color ? form.colorBright : '',
           color ? form.colorGray : '', color ? form.colorRange : '',
           color ? form.colorHistory.join('、') : '', color ? form.colorSafety : '',
@@ -625,6 +636,7 @@
         if (form.scalp.length) L.push('頭皮の状態：' + form.scalp.join('、'));
         if (form.hairConcern.length) L.push('髪の悩み：' + form.hairConcern.join('、'));
         L.push('ご希望メニュー：' + expandOther(form.menu, form.menuOther));
+        if (form.hairLength) L.push('髪の長さ：' + form.hairLength);
         if (color) {
           L.push('― カラーのご希望 ―');
           if (form.colorRange) L.push('・範囲：' + form.colorRange);
@@ -939,6 +951,39 @@
           );
         }
 
+        if (step === 'hairLength') {
+          return Q('今の髪のおおよその長さを教えてください',
+            '薬剤の量や仕上がりのご準備の目安にさせていただきます。図を見ながら、近いものをお選びください。',
+            h('div', {},
+              // 長さの見分け図（お客様が自分の長さを見比べる視覚ガイド）
+              h('img', {
+                src: './length-guide.jpg',
+                alt: '髪の長さの目安：ベリーショート・ショート・ミディアム・セミロング・ロング',
+                onError: (e) => { e.target.style.display = 'none'; },
+                style: {
+                  display: 'block', width: '100%', maxWidth: 360, margin: '0 auto 20px',
+                  borderRadius: 14, border: '1px solid ' + C.border,
+                },
+              }),
+              HAIR_LENGTH.map((o) => h(OptionCard, {
+                key: o.label,
+                selected: form.hairLength === o.label,
+                onClick: () => set('hairLength', o.label),
+                label: h('span', {},
+                  h('span', { style: { fontWeight: 500 } }, o.label),
+                  h('span', { style: { display: 'block', fontSize: '0.8125rem', color: C.muted, marginTop: 2 } }, o.sub)
+                ),
+              })),
+              // ロング料金の事前案内（品質フレーム＋目安レンジ＋当日確定）
+              h('p', {
+                className: 'mt-4',
+                style: { fontSize: '0.8125rem', color: C.muted, lineHeight: 1.9 },
+              },
+                '※髪が長い方は、使う薬剤の量や施術のお時間が増えるため、仕上がりを美しく保つための「ロング料金」を頂戴する場合があります（目安：長さに応じて +¥1,500〜3,000／税込）。正確な料金は当日、髪を拝見してからご案内しますので、どうぞご安心ください。')
+            )
+          );
+        }
+
         // ===== カラー深掘り（カラー系メニュー選択時のみ表示） =====
         if (step === 'colorTone') {
           return Q('なりたい髪色の方向は？',
@@ -1085,6 +1130,7 @@
           add('頭皮の状態', form.scalp.join('、'), 'scalp');
           add('髪の悩み', form.hairConcern.join('、'), 'hairConcern');
           add('ご希望メニュー', expandOther(form.menu, form.menuOther), 'menu');
+          add('髪の長さ', form.hairLength, 'hairLength');
           if (color) {
             add('染める範囲', form.colorRange, 'colorRange');
             add('なりたい色', form.colorTone, 'colorTone');
